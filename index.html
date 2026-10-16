@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Wallet €" />
+  <title>Wallet Tracker (€ / лв.)</title>
+  <style>
+    :root {
+      --bg: #09090b;
+      --card: #18181b;
+      --border: #27272a;
+      --text: #f4f4f5;
+      --muted: #a1a1aa;
+      --accent: #6366f1;
+      --green: #10b981;
+      --amber: #f59e0b;
+      --red: #f43f5e;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      padding: 16px 16px 100px 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      max-width: 480px;
+      margin-inline: auto;
+    }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-top: 8px; }
+    .sub-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 700; }
+    h1 { font-size: 24px; margin: 2px 0 0 0; font-weight: 800; }
+    .btn {
+      background: var(--accent); color: #fff; border: none; border-radius: 12px;
+      padding: 10px 14px; font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+    .btn:active { transform: scale(0.96); opacity: 0.9; }
+    .btn-green { background: var(--green); }
+    .btn-dark { background: #27272a; color: #f4f4f5; }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 22px; padding: 18px; margin-bottom: 14px;
+    }
+    .row-between { display: flex; justify-content: space-between; align-items: flex-start; }
+    .big-eur { font-size: 36px; font-weight: 800; margin-top: 4px; letter-spacing: -0.5px; }
+    .sub-bgn { font-size: 14px; color: var(--muted); margin-top: 2px; font-weight: 500; }
+    .progress-track { width: 100%; height: 10px; background: #27272a; border-radius: 99px; overflow: hidden; margin-top: 8px; display: flex; }
+    .progress-fill { height: 100%; transition: width 0.35s ease; }
+    .input-grid { display: grid; grid-template-columns: 1fr 90px 75px; gap: 8px; margin-top: 10px; }
+    input, select {
+      width: 100%; background: #09090b; border: 1px solid var(--border);
+      color: #fff; padding: 11px; border-radius: 12px; font-size: 14px;
+    }
+    .cat-item { margin-bottom: 14px; }
+    .tx-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px; background: #121215; border: 1px solid #222226;
+      border-radius: 16px; margin-bottom: 8px;
+    }
+    .tx-left { display: flex; align-items: center; gap: 10px; }
+    .tx-icon { width: 38px; height: 38px; border-radius: 12px; background: #27272a; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .island {
+      position: fixed; top: 14px; left: 50%; transform: translateX(-50%) scale(0.9);
+      width: 92%; max-width: 420px; background: #000; border: 1px solid #3f3f46;
+      border-radius: 24px; padding: 12px 16px; display: flex; justify-content: space-between;
+      align-items: center; z-index: 999; opacity: 0; pointer-events: none;
+      transition: all 0.3s ease; box-shadow: 0 12px 30px rgba(0,0,0,0.7);
+    }
+    .island.show { opacity: 1; transform: translateX(-50%) scale(1); }
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; background: rgba(24,24,27,0.92);
+      backdrop-filter: blur(12px); border-top: 1px solid var(--border);
+      display: flex; justify-content: space-around; padding: 10px 0 22px 0; z-index: 90;
+    }
+    .nav-btn { background: none; border: none; color: var(--muted); font-size: 12px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; }
+    .nav-btn.active { color: var(--accent); }
+    .hidden { display: none !important; }
+    .code-box { background: #000; border: 1px solid var(--border); padding: 12px; border-radius: 12px; font-family: monospace; font-size: 12px; color: #a5b4fc; word-break: break-all; margin: 10px 0; }
+  </style>
+</head>
+<body>
+
+  <div id="island" class="island">
+    <div>
+      <div style="font-size:11px; color:#10b981; font-weight:700;"> APPLE PAY ЗАПИСАН</div>
+      <div id="islandText" style="font-size:14px; font-weight:700; margin-top:2px;">Lidl • 25.00 €</div>
+    </div>
+    <span id="islandCat" style="font-size:12px; background:#27272a; padding:4px 10px; border-radius:99px;">Хранителни</span>
+  </div>
+
+  <div class="header">
+    <div>
+      <div class="sub-label">100% Локален & Анонимен</div>
+      <h1>Моят Портфейл</h1>
+    </div>
+    <button id="testPayBtn" type="button" class="btn">+ Тест Apple Pay</button>
+  </div>
+
+  <!-- ТАБ 1: ПОРТФЕЙЛ -->
+  <div id="tab-dashboard">
+    <div class="card">
+      <div class="row-between">
+        <div>
+          <div class="sub-label">Изхарчено този месец</div>
+          <div id="totalMain" class="big-eur">0.00 €</div>
+          <div id="totalSub" class="sub-bgn">≈ 0.00 лв.</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="sub-label">Месечен Бюджет</div>
+          <button id="editBudgetBtn" type="button" style="background:none; border:none; color:#818cf8; font-size:15px; font-weight:800; padding:0; margin-top:6px; cursor:pointer; text-decoration:underline;">1200.00 €</button>
+          <div id="budgetSub" style="font-size:12px; color:var(--muted); margin-top:2px;">2347.00 лв.</div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <div class="row-between" style="font-size:12px; color:var(--muted);">
+          <span id="pctText">0% от бюджета</span>
+          <span id="remText">Остават: 1200.00 €</span>
+        </div>
+        <div class="progress-track">
+          <div id="mainBar" class="progress-fill" style="width:0%; background:var(--green);"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sub-label">Ръчно добавяне на разход</div>
+      <div class="input-grid">
+        <input id="inMerchant" type="text" placeholder="Търговец (напр. OMV)" />
+        <input id="inAmount" type="number" step="0.01" placeholder="Сума" />
+        <select id="inCurr">
+          <option value="EUR" selected>€ EUR</option>
+          <option value="BGN">лв BGN</option>
+        </select>
+      </div>
+      <button id="addManualBtn" type="button" class="btn btn-green" style="width:100%; margin-top:10px;">Добави разход</button>
+    </div>
+
+    <div class="card">
+      <div class="row-between" style="margin-bottom:12px;">
+        <strong style="font-size:16px;">Разпределение по категории (€)</strong>
+        <span style="font-size:11px; color:var(--muted);">Натисни сума за лимит</span>
+      </div>
+      <div id="multiBar" class="progress-track" style="margin-bottom:16px; height:12px;"></div>
+      <div id="catList"></div>
+    </div>
+
+    <div class="card">
+      <div class="row-between" style="margin-bottom:12px;">
+        <strong style="font-size:16px;">Последни плащания</strong>
+        <button id="clearBtn" type="button" style="background:none; border:none; color:var(--red); font-size:12px; font-weight:700; cursor:pointer;">Изчисти всички</button>
+      </div>
+      <div id="txList"></div>
+    </div>
+  </div>
+
+  <!-- ТАБ 2: ПРАВИЛА -->
+  <div id="tab-rules" class="hidden">
+    <div class="card">
+      <strong style="font-size:17px;">Автоматично разпознаване</strong>
+      <p style="font-size:12px; color:var(--muted); margin-top:6px;">Добави дума (напр. "shell" или "еконт") и избери в коя категория да влиза автоматично.</p>
+      <div style="display:grid; grid-template-columns: 1fr 1fr 50px; gap:8px; margin:12px 0;">
+        <input id="ruleWord" type="text" placeholder="Дума (напр. shell)" />
+        <select id="ruleCat"></select>
+        <button id="addRuleBtn" type="button" class="btn">+</button>
+      </div>
+      <div id="rulesContainer"></div>
+    </div>
+  </div>
+
+  <!-- ТАБ 3: iOS ВРЪЗКА И АНОНИМЕН АРХИВ -->
+  <div id="tab-ios" class="hidden">
+    <div class="card">
+      <strong style="font-size:17px;">Анонимен линк за iOS Shortcuts (#)</strong>
+      <p style="font-size:12px; color:var(--muted); margin-top:6px;">Този линк използва знака <b>#</b>, така че сумата и търговецът никога не се изпращат към сървъра на GitHub, а се четат само от твоя iPhone:</p>
+      <div id="myUrlBox" class="code-box"></div>
+      <button id="copyUrlBtn" type="button" class="btn" style="width:100%;">Копирай базовия линк</button>
+    </div>
+
+    <div class="card">
+      <strong style="font-size:16px;">Локален Архив (Backup на телефона)</strong>
+      <p style="font-size:12px; color:var(--muted); margin-top:6px;">Запази копие на данните си във файловете на телефона, за да не ги загубиш при изчистване на Safari.</p>
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button id="exportBtn" type="button" class="btn btn-dark" style="flex:1;">Експорт (.json)</button>
+        <label class="btn btn-dark" style="flex:1; text-align:center;">
+          Импорт
+          <input id="importInput" type="file" accept=".json" class="hidden" />
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <button type="button" class="nav-btn active" data-tab="dashboard">💳<span>Портфейл</span></button>
+    <button type="button" class="nav-btn" data-tab="rules">⚡<span>Правила</span></button>
+    <button type="button" class="nav-btn" data-tab="ios">🔒<span>iOS & Архив</span></button>
+  </div>
+
+  <script>
+    const RATE = 1.95583;
+
+    const DEFAULT_CATS = {
+      "Хранителни": { limit: 400, color: "#10b981", icon: "🛒" },
+      "Гориво и Авто": { limit: 200, color: "#f59e0b", icon: "⛽" },
+      "Заведения и Кафе": { limit: 180, color: "#ec4899", icon: "☕" },
+      "Сметки и Абонаменти": { limit: 150, color: "#6366f1", icon: "📱" },
+      "Пазаруване": { limit: 200, color: "#8b5cf6", icon: "🛍️" },
+      "Здраве и Спорт": { limit: 100, color: "#06b6d4", icon: "💪" },
+      "Други": { limit: 120, color: "#71717a", icon: "📦" }
+    };
+
+    const DEFAULT_RULES = {
+      "lidl": "Хранителни", "kaufland": "Хранителни", "billa": "Хранителни", "fantastico": "Хранителни",
+      "omv": "Гориво и Авто", "eko": "Гориво и Авто", "еко": "Гориво и Авто", "lukoil": "Гориво и Авто", "shell": "Гориво и Авто",
+      "happy": "Заведения и Кафе", "starbucks": "Заведения и Кафе", "неделя": "Заведения и Кафе",
+      "apple": "Сметки и Абонаменти", "a1": "Сметки и Абонаменти", "yettel": "Сметки и Абонаменти", "evn": "Сметки и Абонаменти",
+      "technopolis": "Пазаруване", "технополис": "Пазаруване", "econt": "Пазаруване", "speedy": "Пазаруване", "ikea": "Пазаруване",
+      "subra": "Здраве и Спорт", "sopharmacy": "Здраве и Спорт", "multisport": "Здраве и Спорт"
+    };
+
+    let state = JSON.parse(localStorage.getItem("denis_wallet_eur_v3")) || {
+      budgetEur: 1200,
+      categories: DEFAULT_CATS,
+      rules: DEFAULT_RULES,
+      txs: []
+    };
+
+    function save() {
+      localStorage.setItem("denis_wallet_eur_v3", JSON.stringify(state));
+      render();
+    }
+
+    function eurStr(val) { return Number(val).toFixed(2) + " €"; }
+    function bgnStr(val) { return (Number(val) * RATE).toFixed(2) + " лв."; }
+
+    function findCategory(merchant) {
+      const m = (merchant || "").toLowerCase();
+      for (const [k, v] of Object.entries(state.rules)) {
+        if (m.includes(k.toLowerCase())) return v;
+      }
+      return "Други";
+    }
+
+    function notifyIsland(tx) {
+      const el = document.getElementById("island");
+      document.getElementById("islandText").textContent = `${tx.merchant} • ${eurStr(tx.eur)} (${bgnStr(tx.eur)})`;
+      document.getElementById("islandCat").textContent = tx.cat;
+      el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 3200);
+    }
+
+    function addTx(merchant, eurAmount) {
+      const cat = findCategory(merchant);
+      const tx = {
+        id: Date.now() + Math.random(),
+        merchant: merchant || "Apple Pay",
+        eur: Number(Number(eurAmount).toFixed(2)),
+        cat,
+        date: new Date().toISOString()
+      };
+      state.txs.unshift(tx);
+      save();
+      notifyIsland(tx);
+    }
+
+    function parseSmartAmount(raw) {
+      if (!raw) return null;
+      const s = decodeURIComponent(String(raw)).trim();
+      const isBgn = s.toLowerCase().includes("лв") || s.toLowerCase().includes("bgn");
+      const num = parseFloat(s.replace(",", ".").replace(/[^0-9.-]/g, ""));
+      if (isNaN(num) || num <= 0) return null;
+      return isBgn ? (num / RATE) : num;
+    }
+
+    // Чете както от #amount=... (100% анонимно за сървъра), така и от ?amount=...
+    function checkIncomingApplePay() {
+      const rawQuery = window.location.hash ? window.location.hash.substring(1) : window.location.search;
+      const p = new URLSearchParams(rawQuery);
+      const rawA = p.get("amount");
+      const rawM = p.get("merchant");
+      if (rawA) {
+        const eur = parseSmartAmount(rawA);
+        if (eur) addTx(rawM || "Apple Pay Терминал", eur);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+
+    function render() {
+      const total = state.txs.reduce((s, t) => s + t.eur, 0);
+      document.getElementById("totalMain").textContent = eurStr(total);
+      document.getElementById("totalSub").textContent = "≈ " + bgnStr(total);
+      document.getElementById("editBudgetBtn").textContent = eurStr(state.budgetEur);
+      document.getElementById("budgetSub").textContent = "≈ " + bgnStr(state.budgetEur);
+
+      const pct = Math.min(100, Math.round((total / state.budgetEur) * 100));
+      const rem = Math.max(0, state.budgetEur - total);
+      document.getElementById("pctText").textContent = `${pct}% от бюджета`;
+      document.getElementById("remText").textContent = `Остават: ${eurStr(rem)} (${bgnStr(rem)})`;
+
+      const mainBar = document.getElementById("mainBar");
+      mainBar.style.width = pct + "%";
+      mainBar.style.background = pct >= 90 ? "var(--red)" : pct >= 75 ? "var(--amber)" : "var(--green)";
+
+      const sums = {};
+      Object.keys(state.categories).forEach(c => sums[c] = 0);
+      state.txs.forEach(t => sums[t.cat] = (sums[t.cat] || 0) + t.eur);
+
+      const multiBar = document.getElementById("multiBar");
+      multiBar.innerHTML = "";
+      if (total > 0) {
+        Object.entries(state.categories).forEach(([c, cfg]) => {
+          const w = ((sums[c] || 0) / total) * 100;
+          if (w > 0) {
+            const seg = document.createElement("div");
+            seg.style.width = w + "%";
+            seg.style.background = cfg.color;
+            multiBar.appendChild(seg);
+          }
+        });
+      }
+
+      const catList = document.getElementById("catList");
+      catList.innerHTML = "";
+      Object.entries(state.categories).forEach(([c, cfg]) => {
+        const sp = sums[c] || 0;
+        const lim = cfg.limit || 100;
+        const cp = Math.min(100, Math.round((sp / lim) * 100));
+        const col = cp >= 90 ? "var(--red)" : cfg.color;
+
+        const item = document.createElement("div");
+        item.className = "cat-item";
+        item.innerHTML = `
+          <div class="row-between" style="font-size:13px; margin-bottom:4px;">
+            <strong>${cfg.icon} ${c}</strong>
+            <span data-cat="${c}" class="edit-cat-limit" style="cursor:pointer; text-align:right;">
+              <b>${eurStr(sp)}</b> <span style="color:var(--muted);">/ ${eurStr(lim)}</span>
+              <div style="font-size:11px; color:var(--muted);">≈ ${bgnStr(sp)} / ${bgnStr(lim)}</div>
+            </span>
+          </div>
+          <div class="progress-track" style="height:7px;">
+            <div class="progress-fill" style="width:${cp}%; background:${col};"></div>
+          </div>
+        `;
+        catList.appendChild(item);
+      });
+
+      document.querySelectorAll(".edit-cat-limit").forEach(el => {
+        el.onclick = () => {
+          const c = el.getAttribute("data-cat");
+          const v = prompt(`Нов лимит в ЕВРО (€) за ${c}:`, state.categories[c].limit);
+          if (v && !isNaN(v) && Number(v) > 0) {
+            state.categories[c].limit = Number(v);
+            save();
+          }
+        };
+      });
+
+      const txList = document.getElementById("txList");
+      if (!state.txs.length) {
+        txList.innerHTML = `<div style="text-align:center; color:var(--muted); font-size:13px; padding:18px 0;">Няма записани плащания. Натисни "+ Тест Apple Pay" горе!</div>`;
+      } else {
+        txList.innerHTML = state.txs.slice(0, 30).map(t => {
+          const ic = (state.categories[t.cat] && state.categories[t.cat].icon) || "💳";
+          const d = new Date(t.date).toLocaleDateString("bg-BG", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+          return `
+            <div class="tx-item">
+              <div class="tx-left">
+                <div class="tx-icon">${ic}</div>
+                <div>
+                  <div style="font-weight:700; font-size:14px;">${t.merchant}</div>
+                  <div style="font-size:11px; color:var(--muted);">${t.cat} • ${d}</div>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-weight:800; font-size:14px;">-${eurStr(t.eur)}</div>
+                <div style="font-size:11px; color:var(--muted);">≈ ${bgnStr(t.eur)}</div>
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      const ruleCat = document.getElementById("ruleCat");
+      ruleCat.innerHTML = Object.keys(state.categories).map(c => `<option value="${c}">${c}</option>`).join("");
+      const rulesContainer = document.getElementById("rulesContainer");
+      rulesContainer.innerHTML = Object.entries(state.rules).map(([w, c]) => `
+        <div class="tx-item" style="padding:8px 12px;">
+          <span style="font-size:13px;"><b>"${w}"</b> → ${c}</span>
+          <button data-word="${w}" class="del-rule-btn" style="background:none; border:none; color:var(--red); font-weight:800; cursor:pointer;">✕</button>
+        </div>
+      `).join("");
+
+      document.querySelectorAll(".del-rule-btn").forEach(b => {
+        b.onclick = () => {
+          delete state.rules[b.getAttribute("data-word")];
+          save();
+        };
+      });
+
+      const baseUrl = window.location.origin + window.location.pathname;
+      document.getElementById("myUrlBox").textContent = `${baseUrl}#amount=`;
+    }
+
+    document.getElementById("testPayBtn").addEventListener("click", () => {
+      const demos = [
+        { m: "Lidl Стара Загора", a: 24.50 },
+        { m: "OMV Бензиностанция", a: 52.00 },
+        { m: "Happy Bar & Grill", a: 31.20 },
+        { m: "Технополис", a: 65.00 },
+        { m: "Аптека Subra", a: 14.80 }
+      ];
+      const pick = demos[Math.floor(Math.random() * demos.length)];
+      addTx(pick.m, pick.a);
+    });
+
+    document.getElementById("addManualBtn").addEventListener("click", () => {
+      const m = document.getElementById("inMerchant").value.trim();
+      const a = parseFloat(document.getElementById("inAmount").value);
+      const c = document.getElementById("inCurr").value;
+      if (!m || isNaN(a) || a <= 0) return;
+      const eur = c === "BGN" ? (a / RATE) : a;
+      addTx(m, eur);
+      document.getElementById("inMerchant").value = "";
+      document.getElementById("inAmount").value = "";
+    });
+
+    document.getElementById("editBudgetBtn").addEventListener("click", () => {
+      const v = prompt("Въведи месечен бюджет в ЕВРО (€):", state.budgetEur);
+      if (v && !isNaN(v) && Number(v) > 0) {
+        state.budgetEur = Number(v);
+        save();
+      }
+    });
+
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      if (confirm("Изтриване на всички транзакции?")) {
+        state.txs = [];
+        save();
+      }
+    });
+
+    document.getElementById("addRuleBtn").addEventListener("click", () => {
+      const w = document.getElementById("ruleWord").value.trim().toLowerCase();
+      const c = document.getElementById("ruleCat").value;
+      if (!w) return;
+      state.rules[w] = c;
+      document.getElementById("ruleWord").value = "";
+      save();
+    });
+
+    document.getElementById("copyUrlBtn").addEventListener("click", () => {
+      const baseUrl = window.location.origin + window.location.pathname;
+      navigator.clipboard.writeText(`${baseUrl}#amount=`);
+      alert("Анонимният линк (#) е копиран!");
+    });
+
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "wallet-backup.json";
+      a.click();
+    });
+
+    document.getElementById("importInput").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          state = JSON.parse(ev.target.result);
+          save();
+          alert("Данните са възстановени!");
+        } catch {
+          alert("Невалиден файл!");
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    document.querySelectorAll(".nav-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const target = btn.getAttribute("data-tab");
+        ["dashboard", "rules", "ios"].forEach(t => {
+          document.getElementById("tab-" + t).classList.toggle("hidden", t !== target);
+        });
+        document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+      });
+    });
+
+    checkIncomingApplePay();
+    render();
+  </script>
+</body>
+</html>
